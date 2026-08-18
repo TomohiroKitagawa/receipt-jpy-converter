@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>レシート日本円変換アプリ</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2563eb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="円変換">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>📷 レシート日本円変換</h1>
+    <p class="subtitle">海外のレシートを撮影・読み込みして日本円に自動変換</p>
+  </header>
+
+  <section class="card">
+    <h2>1. レシート画像を読み込む（複数選択可）</h2>
+    <div class="upload-row">
+      <label class="btn btn-primary">
+        📁 画像を選択 / 撮影（複数可）
+        <input type="file" id="imageInput" accept="image/*" multiple hidden>
+      </label>
+      <button id="ocrBtn" class="btn" disabled>🔍 まとめて読み取る</button>
+    </div>
+    <div class="preview-row" id="previewRow"></div>
+    <div id="ocrProgress" class="progress-wrap" hidden>
+      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      <span id="progressLabel">読み取り中...</span>
+    </div>
+  </section>
+
+  <section id="receiptsSection" hidden>
+    <h2 class="section-title">2. 内容を確認・修正（レシートごと）</h2>
+    <div id="receiptsContainer"></div>
+  </section>
+
+  <section class="card">
+    <h2>履歴</h2>
+    <div id="historyEmpty" class="empty-msg">まだ保存されたレシートはありません。</div>
+    <div id="historyList" class="history-list"></div>
+    <button id="clearHistoryBtn" class="btn btn-small btn-danger" hidden>全履歴を削除</button>
+  </section>
+</div>
+
+<datalist id="currencyListTemplate"></datalist>
+<template id="receiptCardTemplate">
+  <section class="card receipt-card">
+    <div class="receipt-card-head">
+      <img class="rc-thumb" alt="レシート画像">
+      <span class="rc-filename"></span>
+    </div>
+    <div class="field-grid">
+      <label>店名
+        <input type="text" class="rc-storeName" placeholder="店名">
+      </label>
+      <label>日付
+        <input type="date" class="rc-date">
+      </label>
+      <label>通貨（レシートの通貨）
+        <input type="text" class="rc-currency" list="currencyListTemplate" placeholder="例: USD">
+      </label>
+    </div>
+
+    <table class="items-table">
+      <thead>
+        <tr>
+          <th>品目・内容</th>
+          <th>金額</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody class="rc-itemsBody"></tbody>
+    </table>
+    <button type="button" class="btn btn-small rc-addRow">＋ 行を追加</button>
+
+    <div class="totals">
+      <div class="total-row">
+        <span>原通貨 合計</span>
+        <span class="rc-totalForeign">-</span>
+      </div>
+      <div class="total-row highlight">
+        <span>日本円 換算</span>
+        <span class="rc-totalJPY">-</span>
+      </div>
+      <div class="rate-info">
+        <span class="rc-rateInfo">為替レート未取得</span>
+        <button type="button" class="btn btn-small rc-refreshRate">🔄 レート更新</button>
+      </div>
+    </div>
+
+    <details class="rc-rawDetails" hidden>
+      <summary>読み取った生テキストを表示（デバッグ用）</summary>
+      <pre class="rc-rawText"></pre>
+    </details>
+
+    <div class="rc-actions">
+      <button type="button" class="btn btn-small btn-danger rc-discard">🗑 破棄</button>
+      <button type="button" class="btn btn-primary rc-save">💾 このレシートを保存</button>
+    </div>
+  </section>
+</template>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="currencies.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
