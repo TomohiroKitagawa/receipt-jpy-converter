@@ -4,10 +4,12 @@
   const HISTORY_KEY = "receiptHistory";
   const RATE_CACHE_PREFIX = "fxRate_";
   const RATE_MAX_AGE_MS = 60 * 60 * 1000; // 1時間
+  const AUTO_MODE_KEY = "autoModeEnabled";
 
   const els = {
     imageInput: document.getElementById("imageInput"),
     ocrBtn: document.getElementById("ocrBtn"),
+    autoModeToggle: document.getElementById("autoModeToggle"),
     previewRow: document.getElementById("previewRow"),
     ocrProgress: document.getElementById("ocrProgress"),
     progressFill: document.getElementById("progressFill"),
@@ -42,6 +44,12 @@
     }[c]));
   }
 
+  // ---------- 自動読み取りモード ----------
+  els.autoModeToggle.checked = localStorage.getItem(AUTO_MODE_KEY) === "true";
+  els.autoModeToggle.addEventListener("change", () => {
+    localStorage.setItem(AUTO_MODE_KEY, els.autoModeToggle.checked ? "true" : "false");
+  });
+
   // ---------- 画像選択（複数） ----------
   els.imageInput.addEventListener("change", () => {
     selectedFiles = Array.from(els.imageInput.files || []);
@@ -55,6 +63,9 @@
       els.previewRow.appendChild(wrap);
     });
     els.ocrBtn.disabled = selectedFiles.length === 0;
+    if (selectedFiles.length > 0 && els.autoModeToggle.checked) {
+      runOcr();
+    }
   });
 
   function setThumbStatus(idx, text) {
@@ -62,8 +73,10 @@
     if (wrap) wrap.querySelector(".thumb-status").textContent = text;
   }
 
-  // ---------- OCR実行（複数枚を順番に処理） ----------
-  els.ocrBtn.addEventListener("click", async () => {
+  // ---------- OCR実行(複数枚を順番に処理) ----------
+  els.ocrBtn.addEventListener("click", () => runOcr());
+
+  async function runOcr() {
     if (selectedFiles.length === 0) return;
     els.ocrBtn.disabled = true;
     els.imageInput.disabled = true;
@@ -100,7 +113,7 @@
     els.ocrBtn.disabled = false;
     els.imageInput.disabled = false;
     els.receiptsSection.scrollIntoView({ behavior: "smooth" });
-  });
+  }
 
   function translateStatus(status) {
     const map = {

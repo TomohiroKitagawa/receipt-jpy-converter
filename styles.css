@@ -79,6 +79,17 @@ body {
 .upload-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .upload-row .btn { flex: 1 1 auto; }
 
+.auto-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.auto-toggle input { width: 18px; height: 18px; }
+
 @media (max-width: 480px) {
   .upload-row { flex-direction: column; }
   .upload-row .btn { width: 100%; }
