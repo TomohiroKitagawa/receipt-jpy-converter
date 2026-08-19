@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const STATIC_CACHE = `receipt-app-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `receipt-app-runtime-${CACHE_VERSION}`;
 
@@ -46,13 +46,30 @@ self.addEventListener("fetch", (event) => {
   const isSameOrigin = url.origin === self.location.origin;
   const isTesseractAsset = /jsdelivr\.net|tessdata|unpkg\.com/.test(url.hostname) || /\.(wasm|traineddata(\.gz)?)$/.test(url.pathname);
 
-  if (isSameOrigin || isTesseractAsset) {
+  if (isSameOrigin) {
+    // アプリ本体は更新をすぐ反映したいので、まずネットワークを試す
+    event.respondWith(networkFirst(req));
+  } else if (isTesseractAsset) {
+    // OCRエンジンの大容量アセットはURL自体がバージョン管理されているためキャッシュ優先でよい
     event.respondWith(cacheFirst(req));
   }
 });
 
+async function networkFirst(req) {
+  const cache = await caches.open(STATIC_CACHE);
+  try {
+    const res = await fetch(req);
+    if (res && res.status === 200) cache.put(req, res.clone());
+    return res;
+  } catch (err) {
+    const cached = await cache.match(req);
+    if (cached) return cached;
+    throw err;
+  }
+}
+
 async function cacheFirst(req) {
-  const cache = await caches.open(req.url.includes("/icon") || PRECACHE_URLS.some((u) => req.url.endsWith(u.replace("./", ""))) ? STATIC_CACHE : RUNTIME_CACHE);
+  const cache = await caches.open(RUNTIME_CACHE);
   const cached = await cache.match(req);
   if (cached) return cached;
   try {
