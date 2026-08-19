@@ -3,6 +3,7 @@
 海外旅行や海外出張で受け取ったレシートを撮影・読み込みして、自動で日本円に変換・記録できるアプリです。スマホやパソコンのブラウザだけで使えます（インストール不要）。
 
 **アプリを開く**: https://tomohirokitagawa.github.io/receipt-jpy-converter/
+**視覚的な利用ガイド（図解版）**: https://tomohirokitagawa.github.io/receipt-jpy-converter/guide.html
 
 ---
 

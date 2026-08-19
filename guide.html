@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>レシート日本円変換 利用ガイド</title>
+<meta name="description" content="海外レシートを日本円に変換するアプリの使い方を、基本操作からfreee会計向けCSV出力までまとめた視覚的なガイドです。">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #f2efe2;
+    --paper: #fbf9f0;
+    --ink: #1c2536;
+    --ink-muted: #5c6270;
+    --line: #ddd5bd;
+    --accent: #c1382a;
+    --accent-soft: #f2d9d1;
+    --navy: #1c2536;
+    --navy-soft: #e6e2d3;
+    --good: #3f6b4f;
+    --shadow: rgba(28, 37, 54, 0.08);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151d;
+      --paper: #191d27;
+      --ink: #ece6d6;
+      --ink-muted: #9aa0ae;
+      --line: #2b3040;
+      --accent: #e2685a;
+      --accent-soft: rgba(226, 104, 90, 0.16);
+      --navy: #0d1017;
+      --navy-soft: #232a3a;
+      --good: #7fb894;
+      --shadow: rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #12151d;
+    --paper: #191d27;
+    --ink: #ece6d6;
+    --ink-muted: #9aa0ae;
+    --line: #2b3040;
+    --accent: #e2685a;
+    --accent-soft: rgba(226, 104, 90, 0.16);
+    --navy: #0d1017;
+    --navy-soft: #232a3a;
+    --good: #7fb894;
+    --shadow: rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans JP", "Hiragino Kaku Gothic ProN", sans-serif;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3 { font-family: "Shippori Mincho", serif; text-wrap: balance; margin: 0; }
+
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a { color: var(--accent); }
+
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    background: var(--navy);
+    color: #f1ece0;
+    padding: 64px 0 46px;
+    position: relative;
+  }
+  .hero .wrap { display: flex; flex-direction: column; gap: 22px; }
+  .hero-eyebrow {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #cbb896;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 4.2vw, 2.9rem);
+    font-weight: 700;
+    color: #fbf9f0;
+  }
+  .hero p.lead {
+    max-width: 34em;
+    color: #cfd0c9;
+    font-size: 1.05rem;
+    margin: 0;
+  }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .btn-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff8f4;
+    padding: 12px 20px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 0.95rem;
+    box-shadow: 0 8px 20px -8px rgba(0,0,0,0.5);
+  }
+  .btn-open:hover { background: #a92e22; }
+  .hero-ticket {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    color: #a9ab9f;
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .hero-ticket b { color: #e6e0cc; font-weight: 500; }
+
+  /* perforation seam between hero and page */
+  .perforation {
+    height: 14px;
+    background-image: radial-gradient(circle, var(--bg) 4px, transparent 4.5px);
+    background-size: 22px 14px;
+    background-position: center;
+    position: relative;
+    top: 7px;
+  }
+
+  /* ---------- Section shell ---------- */
+  section { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+  .section-head { margin-bottom: 30px; }
+  .section-tag {
+    display: inline-block;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .section-head h2 { font-size: clamp(1.4rem, 2.6vw, 1.8rem); color: var(--ink); }
+  .section-head p { color: var(--ink-muted); max-width: 42em; margin: 10px 0 0; }
+
+  /* ---------- Feature grid ---------- */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .feature-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .feature-card svg { flex: none; width: 26px; height: 26px; color: var(--accent); margin-top: 2px; }
+  .feature-card h3 { font-family: "Noto Sans JP", sans-serif; font-size: 0.98rem; font-weight: 600; margin-bottom: 4px; }
+  .feature-card p { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
+
+  /* ---------- Steps (timeline) ---------- */
+  .steps { position: relative; display: flex; flex-direction: column; gap: 0; }
+  .step {
+    display: grid;
+    grid-template-columns: 56px 1fr;
+    gap: 20px;
+    position: relative;
+    padding-bottom: 34px;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    content: "";
+    position: absolute;
+    left: 27px;
+    top: 56px;
+    bottom: 0;
+    width: 1px;
+    background-image: linear-gradient(var(--line) 60%, transparent 40%);
+    background-size: 1px 8px;
+  }
+  .step:last-child::before { display: none; }
+  .step-badge {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Shippori Mincho", serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    z-index: 1;
+  }
+  .step-body h3 { font-family: "Noto Sans JP", sans-serif; font-size: 1.02rem; font-weight: 700; margin-bottom: 6px; }
+  .step-body p { margin: 0; color: var(--ink-muted); }
+  .ui-tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.82rem;
+    background: var(--navy-soft);
+    color: var(--ink);
+    border-radius: 3px;
+    padding: 3px 8px;
+    margin: 2px 3px 2px 0;
+  }
+
+  /* ---------- toggle explainer ---------- */
+  .toggle-panel {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 22px;
+    align-items: center;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 24px;
+  }
+  .switch-illustration {
+    width: 68px;
+    height: 36px;
+    border-radius: 20px;
+    background: var(--accent);
+    position: relative;
+    flex: none;
+  }
+  .switch-illustration::after {
+    content: "";
+    position: absolute;
+    width: 28px; height: 28px;
+    top: 4px; right: 4px;
+    border-radius: 50%;
+    background: #fff8f4;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.25);
+  }
+  .toggle-panel h3 { font-family: "Noto Sans JP", sans-serif; font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+  .toggle-panel p { margin: 0; color: var(--ink-muted); }
+
+  /* ---------- freee mini steps ---------- */
+  .mini-steps { display: flex; flex-direction: column; gap: 14px; }
+  .mini-step {
+    display: grid;
+    grid-template-columns: 34px 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .mini-step .num {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: #f1ece0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .mini-step p { margin: 0; }
+  .mini-step .ui-tag { margin-top: 2px; }
+
+  .callout {
+    margin-top: 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 12px 16px;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.92rem;
+    color: var(--ink);
+  }
+  .callout b { color: var(--accent); }
+
+  /* ---------- rate comparison stubs ---------- */
+  .rate-compare {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 16px;
+  }
+  .stub {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 18px 20px;
+    position: relative;
+  }
+  .stub .label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+  }
+  .stub h3 { font-family: "Noto Sans JP", sans-serif; font-size: 1.05rem; font-weight: 700; margin: 6px 0 8px; }
+  .stub p { margin: 0; color: var(--ink-muted); font-size: 0.9rem; }
+  .stub .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot-today { background: var(--good); }
+  .dot-past { background: var(--accent); }
+
+  /* ---------- FAQ ---------- */
+  .faq-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .faq-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 20px 22px;
+  }
+  .faq-card .q {
+    font-family: "Shippori Mincho", serif;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--ink);
+    margin-bottom: 8px;
+    display: flex;
+    gap: 8px;
+  }
+  .faq-card .q span.mark { color: var(--accent); }
+  .faq-card .a { margin: 0; color: var(--ink-muted); font-size: 0.92rem; }
+
+  footer {
+    padding: 40px 0 64px;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+  }
+  footer a { color: var(--ink-muted); text-decoration: underline; }
+  footer .foot-row { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+
+  @media (max-width: 560px) {
+    .step { grid-template-columns: 44px 1fr; }
+    .step-badge { width: 44px; height: 44px; font-size: 1.05rem; }
+    .step::before { left: 21px; top: 46px; }
+    .toggle-panel { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <span class="hero-eyebrow">USER GUIDE — 利用ガイド</span>
+    <h1>レシート日本円変換</h1>
+    <p class="lead">海外のレシートを撮影するだけで、店名・日付・通貨・金額を読み取り、その日の為替レートで日本円に変換・記録できます。ブラウザだけで動き、確定申告用のCSVもここから出力できます。</p>
+    <div class="hero-actions">
+      <a class="btn-open" href="./index.html">アプリを開く ↗</a>
+    </div>
+    <div class="hero-ticket">
+      <span><b>形式</b> — ブラウザで動作 / インストール不要</span>
+      <span><b>保存先</b> — 端末内のみ（外部送信なし）</span>
+      <span><b>対応</b> — オフラインでも利用可</span>
+    </div>
+  </div>
+</div>
+<div class="perforation"></div>
+
+<main class="wrap">
+
+  <section id="features">
+    <div class="section-head">
+      <span class="section-tag">Overview</span>
+      <h2>できること</h2>
+      <p>レシートの読み取りから記録、確定申告の書類づくりまで、一通りをこのアプリだけで完結できます。</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 8l1.6-2.6A2 2 0 0 1 7.3 4.4h9.4a2 2 0 0 1 1.7 1L20 8"/><rect x="3" y="8" width="18" height="11" rx="2"/><circle cx="12" cy="13.5" r="3.2"/></svg>
+        <div>
+          <h3>写真からOCRで自動読み取り</h3>
+          <p>店名・日付・通貨・金額をレシート画像から自動で認識します。</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M9 9.5h3.2a2 2 0 1 1 0 4H9m0 0h4M9 15.5h6M12 6.5v1M12 16.5v1"/></svg>
+        <div>
+          <h3>その日のレートで自動換算</h3>
+          <p>レシートの日付に応じた為替レートで、日本円に自動変換します。</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h11l3 3v13H5z"/><path d="M9 9h7M9 13h7M9 17h4"/></svg>
+        <div>
+          <h3>確認・修正してから保存</h3>
+          <p>読み取り結果はすべて編集可能。正しい内容だけを履歴に残せます。</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v11m0 0-4-4m4 4 4-4M5 17v2a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-2"/></svg>
+        <div>
+          <h3>freee会計用CSVを出力</h3>
+          <p>保存した履歴を、確定申告の取引インポート形式でまとめて出力できます。</p>
+        </div>
+      </div>
+      <div class="feature-card">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 15a5 5 0 0 1 1.3-9.6A6 6 0 0 1 17.6 8 4.5 4.5 0 0 1 17 17H6a2 2 0 0 1-2-2Z"/></svg>
+        <div>
+          <h3>オフラインでも利用可能</h3>
+          <p>一度開けば通信がなくても使え、ホーム画面に追加してアプリのように使えます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="usage">
+    <div class="section-head">
+      <span class="section-tag">Step by step</span>
+      <h2>使い方（基本操作）</h2>
+      <p>レシート1枚あたりの流れは、読み取り → 確認・修正 → 保存 の3段階です。</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-badge">1</div>
+        <div class="step-body">
+          <h3>画像を選ぶ</h3>
+          <p><span class="ui-tag">📁 画像を選択 / 撮影（複数可）</span>を押して、レシートの写真を選びます。複数枚まとめて選ぶこともできます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-badge">2</div>
+        <div class="step-body">
+          <h3>読み取る</h3>
+          <p><span class="ui-tag">🔍 まとめて読み取る</span>を押すと、画像の内容を自動で読み取ります。枚数によって少し時間がかかります。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-badge">3</div>
+        <div class="step-body">
+          <h3>内容を確認・修正する</h3>
+          <p>店名・日付・通貨・品目・金額が間違っていたら、直接タップして修正します。<span class="ui-tag">＋ 行を追加</span>で品目を増やし、<span class="ui-tag">✕</span>で不要な行を削除できます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-badge">4</div>
+        <div class="step-body">
+          <h3>日本円への換算を確認する</h3>
+          <p>「日本円 換算」欄に、その日のレートで換算した金額が表示されます。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-badge">5</div>
+        <div class="step-body">
+          <h3>保存する</h3>
+          <p>内容が正しければ<span class="ui-tag">💾 このレシートを保存</span>。不要な場合は<span class="ui-tag">🗑 破棄</span>で削除します。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-badge">6</div>
+        <div class="step-body">
+          <h3>履歴を見る</h3>
+          <p>画面下の「履歴」で保存したレシートを一覧できます。タップすると品目の詳細が開き、不要な履歴は削除できます。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="auto-mode">
+    <div class="section-head">
+      <span class="section-tag">Shortcut</span>
+      <h2>自動読み取りモード</h2>
+    </div>
+    <div class="toggle-panel">
+      <div class="switch-illustration" aria-hidden="true"></div>
+      <div>
+        <h3>「自動読み取りモード」をオンにする</h3>
+        <p>画像を選んだ瞬間に自動で読み取りが始まり、<span class="ui-tag">🔍 まとめて読み取る</span>を毎回押す手間を省けます。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="freee">
+    <div class="section-head">
+      <span class="section-tag">Tax filing</span>
+      <h2>確定申告用CSV出力（freee会計）</h2>
+      <p>保存した履歴を、freee会計にそのまま取り込める形式で出力します。</p>
+    </div>
+    <div class="mini-steps">
+      <div class="mini-step">
+        <div class="num">1</div>
+        <p>レシートを保存する際、<span class="ui-tag">勘定科目（freee用）</span>で該当する項目（旅費交通費・会議費など）を選んでおきます。</p>
+      </div>
+      <div class="mini-step">
+        <div class="num">2</div>
+        <p>履歴の下にある<span class="ui-tag">開始日</span><span class="ui-tag">終了日</span>で、出力したい期間を指定します。</p>
+      </div>
+      <div class="mini-step">
+        <div class="num">3</div>
+        <p><span class="ui-tag">⬇️ freee用CSVを出力</span>を押すと、CSVファイルがダウンロードされます。</p>
+      </div>
+      <div class="mini-step">
+        <div class="num">4</div>
+        <p>freee会計の「取引の取り込み」機能で、ダウンロードしたCSVを読み込みます。</p>
+      </div>
+    </div>
+    <div class="callout">
+      <b>ご注意</b> — 為替レートが確定していないレシート（換算に失敗したもの）は出力対象から除外されます。除外があった場合は件数がメッセージで表示されます。
+    </div>
+  </section>
+
+  <section id="rates">
+    <div class="section-head">
+      <span class="section-tag">Exchange rate</span>
+      <h2>レシートの日付とレート換算について</h2>
+      <p>換算に使うレートは、レシートの「日付」が今日かどうかで自動的に切り替わります。</p>
+    </div>
+    <div class="rate-compare">
+      <div class="stub">
+        <span class="label">CASE A</span>
+        <h3><span class="dot dot-today"></span>日付が今日</h3>
+        <p>現在の為替レートで換算します。通常の利用で最も多いケースです。</p>
+      </div>
+      <div class="stub">
+        <span class="label">CASE B</span>
+        <h3><span class="dot dot-past"></span>日付が今日以外</h3>
+        <p>その日付時点の歴史的レートを自動取得。日付を変更すると、レートも自動で再取得されます。</p>
+      </div>
+    </div>
+    <div class="callout">
+      <b>一部の通貨は日付対応外</b> — ベトナムドンや台湾ドルなど一部の通貨は日付ごとのレートに対応していません。この場合は「（日付未対応のため現在レートを使用）」と表示され、現在のレートで換算されます。
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="section-head">
+      <span class="section-tag">Help</span>
+      <h2>よくある質問・困ったとき</h2>
+    </div>
+    <div class="faq-grid">
+      <div class="faq-card">
+        <p class="q"><span class="mark">Q.</span> 更新したのに新しい機能が表示されない</p>
+        <p class="a">一度タブを閉じて、少し時間を置いてから開き直してください。オフラインでも使える仕組みの都合上、更新の反映に時間がかかることがあります。</p>
+      </div>
+      <div class="faq-card">
+        <p class="q"><span class="mark">Q.</span> 読み取り結果が正しくない</p>
+        <p class="a">OCR（自動文字認識）は完璧ではありません。店名・日付・通貨・金額は保存前に必ず確認し、間違っていれば直接修正してください。</p>
+      </div>
+      <div class="faq-card">
+        <p class="q"><span class="mark">Q.</span> 通貨が違う結果になっている</p>
+        <p class="a">「通貨（レシートの通貨）」欄を直接編集すれば、正しい通貨コード（例: USD、EUR）に変更できます。</p>
+      </div>
+      <div class="faq-card">
+        <p class="q"><span class="mark">Q.</span> データはどこに保存されるの？</p>
+        <p class="a">すべてこの端末のブラウザ内に保存され、外部のサーバーには送信されません。ブラウザのデータを消去すると履歴も消えるのでご注意ください。</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap foot-row">
+    <span>レシート日本円変換 — 利用ガイド</span>
+    <span><a href="https://github.com/TomohiroKitagawa/receipt-jpy-converter" target="_blank" rel="noopener">GitHubリポジトリ</a></span>
+  </div>
+</footer>
+</body>
+</html>
