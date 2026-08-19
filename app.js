@@ -6,7 +6,12 @@
   const HIST_RATE_CACHE_PREFIX = "fxRateHist_";
   const RATE_MAX_AGE_MS = 60 * 60 * 1000; // 1時間
   const AUTO_MODE_KEY = "autoModeEnabled";
-  const API_KEY_STORAGE = "exchangerateApiKey";
+  // Frankfurter.app（ECB基準・APIキー不要）が対応する通貨コード。未対応通貨は現在レートにフォールバックする。
+  const FRANKFURTER_CURRENCIES = new Set([
+    "AUD", "BGN", "BRL", "CAD", "CHF", "CNY", "CZK", "DKK", "EUR", "GBP",
+    "HKD", "HUF", "IDR", "ILS", "INR", "ISK", "JPY", "KRW", "MXN", "MYR",
+    "NOK", "NZD", "PHP", "PLN", "RON", "SEK", "SGD", "THB", "TRY", "USD", "ZAR",
+  ]);
 
   // freeeの勘定科目インポート値と一致させる（表示名がそのままfreee側の科目名になる）
   const ACCOUNT_CATEGORIES = [
@@ -35,9 +40,6 @@
     csvTo: document.getElementById("csvTo"),
     csvExportBtn: document.getElementById("csvExportBtn"),
     csvExportMsg: document.getElementById("csvExportMsg"),
-    apiKeyInput: document.getElementById("apiKeyInput"),
-    apiKeySaveBtn: document.getElementById("apiKeySaveBtn"),
-    apiKeyMsg: document.getElementById("apiKeyMsg"),
   };
 
   let selectedFiles = [];
@@ -60,18 +62,6 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     }[c]));
   }
-
-  // ---------- 為替APIキー設定 ----------
-  function getApiKey() {
-    return (localStorage.getItem(API_KEY_STORAGE) || "").trim();
-  }
-
-  els.apiKeyInput.value = getApiKey();
-  els.apiKeySaveBtn.addEventListener("click", () => {
-    localStorage.setItem(API_KEY_STORAGE, els.apiKeyInput.value.trim());
-    els.apiKeyMsg.hidden = false;
-    els.apiKeyMsg.textContent = "APIキーを保存しました。";
-  });
 
   // ---------- 自動読み取りモード ----------
   els.autoModeToggle.checked = localStorage.getItem(AUTO_MODE_KEY) === "true";
@@ -366,10 +356,11 @@
         const result = await getRate(code, date, forceRefresh);
         currentRate = { currency: code, date, ...result };
         const cacheNote = result.fromCache ? "（キャッシュ）" : "";
+        const fallbackNote = result.fallback ? "（日付未対応のため現在レートを使用）" : "";
         c.rateInfo.textContent =
           code === "JPY"
             ? "通貨がJPYのため換算不要です"
-            : `1 ${code} = ${result.rate.toLocaleString(undefined, { maximumFractionDigits: 4 })} 円 （${date}時点${cacheNote}）`;
+            : `1 ${code} = ${result.rate.toLocaleString(undefined, { maximumFractionDigits: 4 })} 円 （${date}時点${cacheNote}）${fallbackNote}`;
       } catch (err) {
         c.rateInfo.textContent = err.message || "レート取得に失敗しました（オフラインの可能性）";
         currentRate = null;
@@ -455,35 +446,35 @@
     }
   }
 
-  // 過去日付のレシートは為替APIキー（exchangerate.host）を使って当日の歴史的レートを取得する。
-  // 一度取得できた過去レートは変わらないため、期限なしでキャッシュする。
+  // 過去日付のレシートはAPIキー不要のFrankfurter.app（ECB基準レート）で当日の歴史的レートを取得する。
+  // 未対応通貨や取得失敗時は現在レートにフォールバックする。一度取得できた過去レートは変わらないため期限なしでキャッシュする。
   async function getHistoricalRate(code, date, forceRefresh) {
     const cacheKey = HIST_RATE_CACHE_PREFIX + code + "_" + date;
     const cachedRaw = localStorage.getItem(cacheKey);
     const cached = cachedRaw ? JSON.parse(cachedRaw) : null;
 
     if (!forceRefresh && cached) {
-      return { rate: cached.rate, fetchedAt: cached.fetchedAt, fromCache: true };
+      return { rate: cached.rate, fetchedAt: cached.fetchedAt, fromCache: true, fallback: !!cached.fallback };
     }
 
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      throw new Error("この日付のレートには為替APIキーの設定が必要です（上部の「⚙️ 為替APIキー設定」から設定してください）");
+    if (!FRANKFURTER_CURRENCIES.has(code)) {
+      const fallback = await getLatestRate(code, forceRefresh);
+      return { ...fallback, fallback: true };
     }
 
-    const url = `https://api.exchangerate.host/historical?access_key=${encodeURIComponent(apiKey)}&date=${date}&source=${code}&currencies=JPY`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (!data || data.success === false) {
-      throw new Error(`歴史的レートの取得に失敗しました: ${data?.error?.info || "APIエラー"}`);
+    try {
+      const res = await fetch(`https://api.frankfurter.app/${date}?from=${code}&to=JPY`);
+      if (!res.ok) throw new Error("API error");
+      const data = await res.json();
+      const rate = data?.rates?.JPY;
+      if (!rate) throw new Error("Invalid response");
+      const fetchedAt = Date.now();
+      localStorage.setItem(cacheKey, JSON.stringify({ rate, fetchedAt, fallback: false }));
+      return { rate, fetchedAt, fromCache: false, fallback: false };
+    } catch (err) {
+      const fallback = await getLatestRate(code, forceRefresh);
+      return { ...fallback, fallback: true };
     }
-    const rate = data.quotes?.[`${code}JPY`] ?? data.rates?.JPY;
-    if (!rate) {
-      throw new Error("この日付・通貨のレートが見つかりませんでした");
-    }
-    const fetchedAt = Date.now();
-    localStorage.setItem(cacheKey, JSON.stringify({ rate, fetchedAt }));
-    return { rate, fetchedAt, fromCache: false };
   }
 
   // ---------- 履歴 ----------
