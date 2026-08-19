@@ -21,6 +21,20 @@
     <p class="subtitle">海外のレシートを撮影・読み込みして日本円に自動変換</p>
   </header>
 
+  <details class="card api-key-box">
+    <summary>⚙️ 為替APIキー設定（レシート日付に応じた当日レート取得用）</summary>
+    <p class="api-key-note">
+      レシートの日付が今日以外の場合、当日の歴史的レートを
+      <a href="https://exchangerate.host/" target="_blank" rel="noopener">exchangerate.host</a>
+      から取得します。無料のAPIキーを取得してここに入力してください（このブラウザ内のみに保存され、GitHubには含まれません）。
+    </p>
+    <div class="api-key-row">
+      <input type="password" id="apiKeyInput" placeholder="exchangerate.host の Access Key">
+      <button id="apiKeySaveBtn" class="btn btn-small">保存</button>
+    </div>
+    <p id="apiKeyMsg" class="csv-export-msg" hidden></p>
+  </details>
+
   <section class="card">
     <h2>1. レシート画像を読み込む（複数選択可）</h2>
     <div class="upload-row">

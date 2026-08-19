@@ -3,8 +3,10 @@
 
   const HISTORY_KEY = "receiptHistory";
   const RATE_CACHE_PREFIX = "fxRate_";
+  const HIST_RATE_CACHE_PREFIX = "fxRateHist_";
   const RATE_MAX_AGE_MS = 60 * 60 * 1000; // 1時間
   const AUTO_MODE_KEY = "autoModeEnabled";
+  const API_KEY_STORAGE = "exchangerateApiKey";
 
   // freeeの勘定科目インポート値と一致させる（表示名がそのままfreee側の科目名になる）
   const ACCOUNT_CATEGORIES = [
@@ -33,6 +35,9 @@
     csvTo: document.getElementById("csvTo"),
     csvExportBtn: document.getElementById("csvExportBtn"),
     csvExportMsg: document.getElementById("csvExportMsg"),
+    apiKeyInput: document.getElementById("apiKeyInput"),
+    apiKeySaveBtn: document.getElementById("apiKeySaveBtn"),
+    apiKeyMsg: document.getElementById("apiKeyMsg"),
   };
 
   let selectedFiles = [];
@@ -55,6 +60,18 @@
       "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     }[c]));
   }
+
+  // ---------- 為替APIキー設定 ----------
+  function getApiKey() {
+    return (localStorage.getItem(API_KEY_STORAGE) || "").trim();
+  }
+
+  els.apiKeyInput.value = getApiKey();
+  els.apiKeySaveBtn.addEventListener("click", () => {
+    localStorage.setItem(API_KEY_STORAGE, els.apiKeyInput.value.trim());
+    els.apiKeyMsg.hidden = false;
+    els.apiKeyMsg.textContent = "APIキーを保存しました。";
+  });
 
   // ---------- 自動読み取りモード ----------
   els.autoModeToggle.checked = localStorage.getItem(AUTO_MODE_KEY) === "true";
@@ -323,11 +340,17 @@
       return getItems().reduce((sum, it) => sum + it.amount, 0);
     }
 
+    function rateMatchesForm() {
+      const code = c.currency.value.trim().toUpperCase() || "USD";
+      const date = c.date.value || todayStr();
+      return currentRate && currentRate.currency === code && currentRate.date === date;
+    }
+
     function renderTotals() {
       const total = sumForeign();
       const code = c.currency.value.trim().toUpperCase() || "USD";
       c.totalForeign.textContent = `${total.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${code}`;
-      if (currentRate && currentRate.currency === code) {
+      if (rateMatchesForm()) {
         const jpy = total * currentRate.rate;
         c.totalJPY.textContent = `¥${Math.round(jpy).toLocaleString()}`;
       } else {
@@ -337,24 +360,25 @@
 
     async function fetchRateAndRender(forceRefresh = false) {
       const code = c.currency.value.trim().toUpperCase() || "USD";
+      const date = c.date.value || todayStr();
       c.rateInfo.textContent = "レート取得中...";
       try {
-        const result = await getRate(code, forceRefresh);
-        currentRate = { currency: code, ...result };
-        const dt = new Date(result.fetchedAt);
+        const result = await getRate(code, date, forceRefresh);
+        currentRate = { currency: code, date, ...result };
         const cacheNote = result.fromCache ? "（キャッシュ）" : "";
         c.rateInfo.textContent =
           code === "JPY"
             ? "通貨がJPYのため換算不要です"
-            : `1 ${code} = ${result.rate.toLocaleString(undefined, { maximumFractionDigits: 4 })} 円 ${cacheNote} (${dt.toLocaleString("ja-JP")})`;
+            : `1 ${code} = ${result.rate.toLocaleString(undefined, { maximumFractionDigits: 4 })} 円 （${date}時点${cacheNote}）`;
       } catch (err) {
-        c.rateInfo.textContent = "レート取得に失敗しました（オフラインの可能性）";
+        c.rateInfo.textContent = err.message || "レート取得に失敗しました（オフラインの可能性）";
         currentRate = null;
       }
       renderTotals();
     }
 
     c.currency.addEventListener("change", () => fetchRateAndRender());
+    c.date.addEventListener("change", () => fetchRateAndRender());
     c.refreshRate.addEventListener("click", () => fetchRateAndRender(true));
 
     c.discard.addEventListener("click", () => {
@@ -365,7 +389,7 @@
       const items = getItems().filter((it) => it.description || it.amount);
       const code = c.currency.value.trim().toUpperCase() || "USD";
       const totalForeign = sumForeign();
-      const totalJPY = currentRate && currentRate.currency === code
+      const totalJPY = rateMatchesForm()
         ? Math.round(totalForeign * currentRate.rate)
         : null;
 
@@ -378,7 +402,7 @@
         items,
         totalForeign,
         totalJPY,
-        savedRate: currentRate && currentRate.currency === code ? currentRate.rate : null,
+        savedRate: rateMatchesForm() ? currentRate.rate : null,
       };
 
       const history = loadHistory();
@@ -396,9 +420,16 @@
   }
 
   // ---------- 為替レート ----------
-  async function getRate(code, forceRefresh) {
+  async function getRate(code, date, forceRefresh) {
     if (code === "JPY") return { rate: 1, fetchedAt: Date.now(), fromCache: false };
 
+    if (date === todayStr()) {
+      return getLatestRate(code, forceRefresh);
+    }
+    return getHistoricalRate(code, date, forceRefresh);
+  }
+
+  async function getLatestRate(code, forceRefresh) {
     const cacheKey = RATE_CACHE_PREFIX + code;
     const cachedRaw = localStorage.getItem(cacheKey);
     const cached = cachedRaw ? JSON.parse(cachedRaw) : null;
@@ -422,6 +453,37 @@
       if (cached) return { rate: cached.rate, fetchedAt: cached.fetchedAt, fromCache: true };
       throw err;
     }
+  }
+
+  // 過去日付のレシートは為替APIキー（exchangerate.host）を使って当日の歴史的レートを取得する。
+  // 一度取得できた過去レートは変わらないため、期限なしでキャッシュする。
+  async function getHistoricalRate(code, date, forceRefresh) {
+    const cacheKey = HIST_RATE_CACHE_PREFIX + code + "_" + date;
+    const cachedRaw = localStorage.getItem(cacheKey);
+    const cached = cachedRaw ? JSON.parse(cachedRaw) : null;
+
+    if (!forceRefresh && cached) {
+      return { rate: cached.rate, fetchedAt: cached.fetchedAt, fromCache: true };
+    }
+
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      throw new Error("この日付のレートには為替APIキーの設定が必要です（上部の「⚙️ 為替APIキー設定」から設定してください）");
+    }
+
+    const url = `https://api.exchangerate.host/historical?access_key=${encodeURIComponent(apiKey)}&date=${date}&source=${code}&currencies=JPY`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data || data.success === false) {
+      throw new Error(`歴史的レートの取得に失敗しました: ${data?.error?.info || "APIエラー"}`);
+    }
+    const rate = data.quotes?.[`${code}JPY`] ?? data.rates?.JPY;
+    if (!rate) {
+      throw new Error("この日付・通貨のレートが見つかりませんでした");
+    }
+    const fetchedAt = Date.now();
+    localStorage.setItem(cacheKey, JSON.stringify({ rate, fetchedAt }));
+    return { rate, fetchedAt, fromCache: false };
   }
 
   // ---------- 履歴 ----------
