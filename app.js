@@ -601,5 +601,12 @@
         console.warn("Service Worker登録に失敗しました:", err);
       });
     });
+    // 新しいService Workerが有効化されたら、古いapp.jsがタブに残り続けないよう自動で再読み込みする
+    let reloadedForUpdate = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (reloadedForUpdate) return;
+      reloadedForUpdate = true;
+      window.location.reload();
+    });
   }
 })();
