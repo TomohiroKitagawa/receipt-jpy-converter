@@ -296,3 +296,39 @@ details { margin-top: 10px; font-size: 0.85rem; }
 .history-item .hi-detail table { width: 100%; border-collapse: collapse; }
 .history-item .hi-detail td { padding: 2px 0; }
 .history-item .hi-actions { margin-top: 8px; text-align: right; }
+
+.csv-export-box {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.csv-export-box h3 {
+  font-size: 0.9rem;
+  margin: 0 0 10px;
+}
+.csv-export-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.csv-export-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  flex: 1 1 140px;
+}
+.csv-export-row input {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 16px;
+  min-height: 42px;
+}
+.csv-export-msg {
+  margin: 10px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

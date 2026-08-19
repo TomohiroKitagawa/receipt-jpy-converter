@@ -6,6 +6,13 @@
   const RATE_MAX_AGE_MS = 60 * 60 * 1000; // 1時間
   const AUTO_MODE_KEY = "autoModeEnabled";
 
+  // freeeの勘定科目インポート値と一致させる（表示名がそのままfreee側の科目名になる）
+  const ACCOUNT_CATEGORIES = [
+    "旅費交通費", "会議費", "接待交際費", "消耗品費", "通信費",
+    "新聞図書費", "支払手数料", "諸会費", "広告宣伝費", "外注工賃", "雑費",
+  ];
+  const DEFAULT_ACCOUNT = "旅費交通費";
+
   const els = {
     imageInput: document.getElementById("imageInput"),
     ocrBtn: document.getElementById("ocrBtn"),
@@ -21,6 +28,11 @@
     historyEmpty: document.getElementById("historyEmpty"),
     historyList: document.getElementById("historyList"),
     clearHistoryBtn: document.getElementById("clearHistoryBtn"),
+    csvExportBox: document.getElementById("csvExportBox"),
+    csvFrom: document.getElementById("csvFrom"),
+    csvTo: document.getElementById("csvTo"),
+    csvExportBtn: document.getElementById("csvExportBtn"),
+    csvExportMsg: document.getElementById("csvExportMsg"),
   };
 
   let selectedFiles = [];
@@ -255,6 +267,7 @@
       storeName: card.querySelector(".rc-storeName"),
       date: card.querySelector(".rc-date"),
       currency: card.querySelector(".rc-currency"),
+      account: card.querySelector(".rc-account"),
       itemsBody: card.querySelector(".rc-itemsBody"),
       addRow: card.querySelector(".rc-addRow"),
       totalForeign: card.querySelector(".rc-totalForeign"),
@@ -274,6 +287,10 @@
     c.storeName.value = parsed.storeName;
     c.date.value = parsed.date;
     c.currency.value = parsed.currency;
+    c.account.innerHTML = ACCOUNT_CATEGORIES.map(
+      (name) => `<option value="${name}">${name}</option>`
+    ).join("");
+    c.account.value = DEFAULT_ACCOUNT;
     c.rawText.textContent = rawText;
     c.rawDetails.hidden = false;
 
@@ -357,6 +374,7 @@
         storeName: c.storeName.value || "(店名未入力)",
         date: c.date.value || todayStr(),
         currency: code,
+        account: c.account.value || DEFAULT_ACCOUNT,
         items,
         totalForeign,
         totalJPY,
@@ -419,6 +437,7 @@
     const history = loadHistory();
     els.historyEmpty.hidden = history.length > 0;
     els.clearHistoryBtn.hidden = history.length === 0;
+    els.csvExportBox.hidden = history.length === 0;
     els.historyList.innerHTML = "";
 
     history.forEach((rec) => {
@@ -427,7 +446,7 @@
       const jpyLabel = rec.totalJPY !== null ? `¥${rec.totalJPY.toLocaleString()}` : "換算不明";
       div.innerHTML = `
         <div class="hi-top"><span>${escapeHtml(rec.storeName)}</span><span>${jpyLabel}</span></div>
-        <div class="hi-sub">${rec.date} ・ ${rec.totalForeign.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${rec.currency}</div>
+        <div class="hi-sub">${rec.date} ・ ${rec.totalForeign.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${rec.currency} ・ ${escapeHtml(rec.account || DEFAULT_ACCOUNT)}</div>
         <div class="hi-detail" hidden>
           <table>${rec.items.map((it) => `<tr><td>${escapeHtml(it.description || "-")}</td><td style="text-align:right">${it.amount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${rec.currency}</td></tr>`).join("")}</table>
           <div class="hi-actions"><button type="button" class="btn btn-small btn-danger del-history">削除</button></div>
@@ -452,6 +471,71 @@
       localStorage.removeItem(HISTORY_KEY);
       renderHistory();
     }
+  });
+
+  // ---------- 確定申告用CSV出力（freee会計 取引インポート形式） ----------
+  const CSV_HEADERS = ["収支区分", "発生日", "取引先", "勘定科目", "税区分", "金額", "備考"];
+
+  function csvEscape(value) {
+    const s = String(value ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  }
+
+  function buildFreeeMemo(rec) {
+    if (rec.currency === "JPY") return "";
+    const amountStr = rec.totalForeign.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    if (rec.savedRate) {
+      return `${amountStr} ${rec.currency} @${rec.savedRate.toLocaleString(undefined, { maximumFractionDigits: 4 })}`;
+    }
+    return `${amountStr} ${rec.currency}`;
+  }
+
+  function buildFreeeCsv(records) {
+    const rows = [CSV_HEADERS];
+    for (const rec of records) {
+      rows.push([
+        "支出",
+        rec.date,
+        rec.storeName,
+        rec.account || DEFAULT_ACCOUNT,
+        "対象外",
+        rec.totalJPY,
+        buildFreeeMemo(rec),
+      ]);
+    }
+    return rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+  }
+
+  els.csvExportBtn.addEventListener("click", () => {
+    const from = els.csvFrom.value;
+    const to = els.csvTo.value;
+    const history = loadHistory();
+    const inRange = history.filter((rec) => (!from || rec.date >= from) && (!to || rec.date <= to));
+    const exportable = inRange.filter((rec) => rec.totalJPY !== null);
+    const skipped = inRange.length - exportable.length;
+
+    if (exportable.length === 0) {
+      els.csvExportMsg.hidden = false;
+      els.csvExportMsg.textContent = "指定期間内に出力できるレシートがありません（為替レート未確定の履歴は除外されます）。";
+      return;
+    }
+
+    const csv = "﻿" + buildFreeeCsv(exportable);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = (from || "all") + "_" + (to || "all");
+    a.href = url;
+    a.download = `freee_import_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    els.csvExportMsg.hidden = false;
+    els.csvExportMsg.textContent = skipped > 0
+      ? `${exportable.length}件を出力しました（為替レート未確定の${skipped}件は除外）。`
+      : `${exportable.length}件を出力しました。`;
   });
 
   // ---------- 起動 ----------
