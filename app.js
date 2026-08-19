@@ -463,7 +463,7 @@
     }
 
     try {
-      const res = await fetch(`https://api.frankfurter.app/${date}?from=${code}&to=JPY`);
+      const res = await fetch(`https://api.frankfurter.dev/v1/${date}?from=${code}&to=JPY`);
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
       const rate = data?.rates?.JPY;
